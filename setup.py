@@ -30,7 +30,7 @@ setup(
     author_email='johnsochacki@hotmail.com',
     url='https://github.com/jsochacki',
     packages = find_packages(exclude=['*test*']),
-    install_requires=['numpy', 'scipy'],
+    install_requires=['numpy', 'scipy', 'pandas'],
     keywords = ['Linear Systens',
                 'Communications Systems',
                 'Microwave Design'],

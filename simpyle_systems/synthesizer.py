@@ -1,7 +1,8 @@
 """
 Author: socHACKi
-This module is a collection of matlab like functions that allow the user
-to run matlab like code and do communications work in python.
+This module is a collection of classes that can be used to help
+the user make system level synthesizer design choices and analysis.
+There are also some matlab like functions that are implemented.
 """
 
 import numpy as np
