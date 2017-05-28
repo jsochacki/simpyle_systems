@@ -5,6 +5,7 @@ This is to test the modem module as implementd for development
 # %%
 import numpy as np
 import os
+import pandas as pd
 #from socHACKi.socHACKiUtilityPackage import AttrDict
 
 # %%
@@ -24,6 +25,7 @@ adjustment_dict = {'Rx': 5800,
                    'Tx': 5800}
 reference_frequencies = [100, 200, 300]
 cumulative_LO_mutiplication = 2
+cumulative_addative_noise_limit = 0.3
 lo_frequency_dict = {'Rx': [5800 * cumulative_LO_mutiplication,
                              (5800 + 200) * cumulative_LO_mutiplication,
                              (5800 + 350) * cumulative_LO_mutiplication,
@@ -40,11 +42,14 @@ lo_frequency_dict = {'Rx': [5800 * cumulative_LO_mutiplication,
                              (9933 + 1000) * cumulative_LO_mutiplication]}
 lo_tuning_range = 125
 lo_tuning_step_sizes = np.arange(1,lo_tuning_range/cumulative_LO_mutiplication,1)
-result_type_list = ['f_vals',
+result_type_list = ['f_vals_MHz',
                     'dominant_IBS_spur_per_frequency',
                     'cumulative_addative_noise_per_frequency',
-                    'effective_tuning_step_size',
-                    'maximum_cumulative_addative_noise_per_step']
+                    'effective_tuning_step_size_MHz',
+                    'maximum_cumulative_addative_noise_per_step',
+                    'range_tuned',
+                    'center_frequency_hit',
+                    'worst_case_maximum_cumulative_addative_noise_per_step']
 # %%
 set_dict = {'Rx': reference_frequencies,
             'Tx': reference_frequencies}
@@ -78,7 +83,7 @@ for Key in set_dict:
 
                 analysis_synthesizer_frequency_values = np.array(
                     [Frequency
-                         if (Frequency > adjustment_dict[Key])
+                         if (Frequency >= adjustment_dict[Key])
                          else Frequency*2
                          for Frequency in analysis_synthesizer_frequency_values])
 
@@ -128,12 +133,22 @@ for Key in set_dict:
                     Key][
                     ReferenceFrequency].update({LoCenterFrequency:{}})
             max_addative_noise_array = []
+            current_tuning_range_array = []
+            center_frequency_hit_array = []
             if LoCenterFrequency == np.min(lo_frequency_dict[Key]):
                 for delta_frequency in effective_tuning_step_size:
                     max_addative_noise = 0
                     current_addative_noise = 0
-                    for current_frequency in np.arange(LoCenterFrequency,
-                                                       LoCenterFrequency + lo_tuning_range,
+                    current_tuning_range = delta_frequency * (
+                                    lo_tuning_range // delta_frequency)
+                    center_frequency_hit = False
+                    # Need to add the + delta_frequency to the top end of the
+                    # list to get actually specified range due to lack of
+                    # inclusion on range end in python, grrrrr!! :(
+                    for current_frequency in np.arange(
+                            LoCenterFrequency,
+                            LoCenterFrequency + current_tuning_range +
+                                delta_frequency,
                                                        delta_frequency):
 
                         current_addative_noise = np.interp(current_frequency,
@@ -148,8 +163,19 @@ for Key in set_dict:
 
                         if (current_addative_noise > max_addative_noise):
                             max_addative_noise = current_addative_noise
+
+                        if ~center_frequency_hit:
+                            if current_frequency == LoCenterFrequency:
+                                center_frequency_hit = True
+
                     max_addative_noise_array.append([delta_frequency, max_addative_noise])
+                    current_tuning_range_array.extend([current_tuning_range])
+                    center_frequency_hit_array.extend([center_frequency_hit])
+
                 max_addative_noise_array = np.array(max_addative_noise_array)
+                current_tuning_range_array = np.array(current_tuning_range_array)
+                center_frequency_hit_array = np.array(center_frequency_hit_array)
+
                 results_dictionary[
                         Key][
                         ReferenceFrequency][
@@ -160,14 +186,30 @@ for Key in set_dict:
                         ReferenceFrequency][
                         LoCenterFrequency].update(
                             {result_type_list[4]: max_addative_noise_array[:,1]})
+                results_dictionary[
+                        Key][
+                        ReferenceFrequency][
+                        LoCenterFrequency].update(
+                            {result_type_list[5]: current_tuning_range_array})
+                results_dictionary[
+                        Key][
+                        ReferenceFrequency][
+                        LoCenterFrequency].update(
+                            {result_type_list[6]: center_frequency_hit_array})
 
-# TODO I believe the error is in here
             elif LoCenterFrequency == np.max(lo_frequency_dict[Key]):
                 for delta_frequency in effective_tuning_step_size:
                     max_addative_noise = 0
                     current_addative_noise = 0
-                    for current_frequency in np.arange(LoCenterFrequency - lo_tuning_range,
-                                                       LoCenterFrequency,
+                    current_tuning_range = delta_frequency * (
+                                    lo_tuning_range // delta_frequency)
+                    center_frequency_hit = False
+                    # Need to add the + delta_frequency to the top end of the
+                    # list to get actually specified range due to lack of
+                    # inclusion on range end in python, grrrrr!! :(
+                    for current_frequency in np.arange(
+                            LoCenterFrequency - current_tuning_range,
+                            LoCenterFrequency + delta_frequency,
                                                        delta_frequency):
 
                         current_addative_noise = np.interp(current_frequency,
@@ -182,8 +224,19 @@ for Key in set_dict:
 
                         if (current_addative_noise > max_addative_noise):
                             max_addative_noise = current_addative_noise
+
+                        if ~center_frequency_hit:
+                            if current_frequency == LoCenterFrequency:
+                                center_frequency_hit = True
+
                     max_addative_noise_array.append([delta_frequency, max_addative_noise])
+                    current_tuning_range_array.extend([current_tuning_range])
+                    center_frequency_hit_array.extend([center_frequency_hit])
+
                 max_addative_noise_array = np.array(max_addative_noise_array)
+                current_tuning_range_array = np.array(current_tuning_range_array)
+                center_frequency_hit_array = np.array(center_frequency_hit_array)
+
                 results_dictionary[
                         Key][
                         ReferenceFrequency][
@@ -194,13 +247,31 @@ for Key in set_dict:
                         ReferenceFrequency][
                         LoCenterFrequency].update(
                             {result_type_list[4]: max_addative_noise_array[:,1]})
+                results_dictionary[
+                        Key][
+                        ReferenceFrequency][
+                        LoCenterFrequency].update(
+                            {result_type_list[5]: current_tuning_range_array})
+                results_dictionary[
+                        Key][
+                        ReferenceFrequency][
+                        LoCenterFrequency].update(
+                            {result_type_list[6]: center_frequency_hit_array})
 
             else:
                 for delta_frequency in effective_tuning_step_size:
                     max_addative_noise = 0
                     current_addative_noise = 0
-                    for current_frequency in np.arange(LoCenterFrequency - lo_tuning_range,
-                                                       LoCenterFrequency + lo_tuning_range,
+                    current_tuning_range = delta_frequency * (
+                                    lo_tuning_range // delta_frequency)
+                    center_frequency_hit = False
+                    # Need to add the + delta_frequency to the top end of the
+                    # list to get actually specified range due to lack of
+                    # inclusion on range end in python, grrrrr!! :(
+                    for current_frequency in np.arange(
+                            LoCenterFrequency - current_tuning_range,
+                            LoCenterFrequency + current_tuning_range +
+                                delta_frequency,
                                                        delta_frequency):
 
                         current_addative_noise = np.interp(current_frequency,
@@ -215,8 +286,19 @@ for Key in set_dict:
 
                         if (current_addative_noise > max_addative_noise):
                             max_addative_noise = current_addative_noise
+
+                        if ~center_frequency_hit:
+                            if current_frequency == LoCenterFrequency:
+                                center_frequency_hit = True
+
                     max_addative_noise_array.append([delta_frequency, max_addative_noise])
+                    current_tuning_range_array.extend([current_tuning_range])
+                    center_frequency_hit_array.extend([center_frequency_hit])
+
                 max_addative_noise_array = np.array(max_addative_noise_array)
+                current_tuning_range_array = np.array(current_tuning_range_array)
+                center_frequency_hit_array = np.array(center_frequency_hit_array)
+
                 results_dictionary[
                         Key][
                         ReferenceFrequency][
@@ -227,52 +309,369 @@ for Key in set_dict:
                         ReferenceFrequency][
                         LoCenterFrequency].update(
                             {result_type_list[4]: max_addative_noise_array[:,1]})
+                results_dictionary[
+                        Key][
+                        ReferenceFrequency][
+                        LoCenterFrequency].update(
+                            {result_type_list[5]: current_tuning_range_array})
+                results_dictionary[
+                        Key][
+                        ReferenceFrequency][
+                        LoCenterFrequency].update(
+                            {result_type_list[6]: center_frequency_hit_array})
+# %%
+for Key in set_dict:
+    for ReferenceFrequency in reference_frequencies:
+        worst_case_maximum_array = []
+        for Index in range(len(effective_tuning_step_size)):
+            worst_case_maximum = 0
+            current_worst_case_maximum = 0
+            for LoCenterFrequency in lo_frequency_dict[Key]:
+                current_worst_case_maximum = results_dictionary[
+                                                Key][
+                                                ReferenceFrequency][
+                                                LoCenterFrequency][
+                                                result_type_list[4]][Index]
+                if current_worst_case_maximum > worst_case_maximum:
+                    worst_case_maximum = current_worst_case_maximum
+
+            worst_case_maximum_array.extend([worst_case_maximum])
+
+        worst_case_maximum_array = np.array(worst_case_maximum_array)
+        results_dictionary[
+                    Key][
+                    ReferenceFrequency].update(
+                        {result_type_list[3]: effective_tuning_step_size})
+        results_dictionary[
+                    Key][
+                    ReferenceFrequency].update(
+                        {result_type_list[7]: worst_case_maximum_array})
+# %%
+plt.close("all")
+for Key in set_dict:
+    for ReferenceFrequency in reference_frequencies:
+        fig = plt.figure('{0} Synthesizer {1} results for '
+                         '{2}MHz Reference Frequency'.format(
+                                 Key,
+                                 result_type_list[1],
+                                 ReferenceFrequency),
+                        figsize=(18,10))
+        plt.title('{0} Synthesizer IBS results for '
+                   '{2}MHz Reference Frequency'.format(
+                Key,
+                result_type_list[1],
+                ReferenceFrequency))
+
+        plt.plot(results_dictionary[Key][ReferenceFrequency][result_type_list[0]],
+                 results_dictionary[Key][ReferenceFrequency][result_type_list[1]],
+                 label='Dominant IBS Spur Value')
+        plt.legend()
+
+        plt.legend(bbox_to_anchor=(0.99, 0.99), loc='upper right', borderaxespad=0.)
+
+        plt.grid(color='k', linestyle='--', linewidth=0.5)
+        plt.grid(which='major', alpha=0.9)
+
+        resolution = 20
+        size = results_dictionary[Key][ReferenceFrequency][result_type_list[0]].size
+        min_x = results_dictionary[Key][ReferenceFrequency][result_type_list[0]][0]
+        max_x = results_dictionary[Key][ReferenceFrequency][result_type_list[0]][-1]
+        plt.xticks(np.arange(min_x, max_x, ((max_x - min_x) // resolution)))
+
+        ax = fig.add_subplot(1, 1, 1)
+
+        ax.set_xticks(results_dictionary[
+                        Key][
+                        ReferenceFrequency][
+                        result_type_list[0]][0::(size // (resolution * 2))],
+                      minor=True)
+
+        plt.grid(which='minor', color='k', linestyle='--', linewidth=0.5)
+        plt.grid(which='minor', alpha=0.3)
+
+        plt.xlabel('Frequency (MHz)')
+        plt.ylabel('Dominant IBS Spur Value (dBc)')
+
+        plt.savefig(os.path.join(file_path,
+                               results_directory_name,
+                               'Dominant_IBS_Spur_Value_'
+                               '{0}_Synthesizer_{1}MHz_Ref_vs_tuneF'.format(
+                                       Key,
+                                       ReferenceFrequency)),
+                    bbox_inches='tight')
 
 # %%
+plt.close("all")
 for Key in set_dict:
     for ReferenceFrequency in reference_frequencies:
-        plt.figure('{0} Synthesizer {1} results for '
+        fig = plt.figure('{0} Synthesizer {1} results for '
+                         '{2}MHz Reference Frequency'.format(
+                                 Key,
+                                 result_type_list[2],
+                                 ReferenceFrequency),
+                         figsize=(18,10))
+        plt.title('{0} Synthesizer Additive results for '
                    '{2}MHz Reference Frequency'.format(
                 Key,
                 result_type_list[1],
                 ReferenceFrequency))
+
         plt.plot(results_dictionary[Key][ReferenceFrequency][result_type_list[0]],
-                 results_dictionary[Key][ReferenceFrequency][result_type_list[1]])
-        plt.plot(results_dictionary[Key][ReferenceFrequency][result_type_list[0]],
-                 results_dictionary[Key][ReferenceFrequency][result_type_list[2]])
+                 results_dictionary[Key][ReferenceFrequency][result_type_list[2]],
+                 label='Cumulative Addative Noise Due To IBSs')
+        plt.legend()
+
+        plt.legend(bbox_to_anchor=(0.99, 0.99), loc='upper right', borderaxespad=0.)
+
+        plt.grid(color='k', linestyle='--', linewidth=0.5)
+        plt.grid(which='major', alpha=0.9)
+
+        resolution = 20
+        size = results_dictionary[Key][ReferenceFrequency][result_type_list[0]].size
+        min_x = results_dictionary[Key][ReferenceFrequency][result_type_list[0]][0]
+        max_x = results_dictionary[Key][ReferenceFrequency][result_type_list[0]][-1]
+        plt.xticks(np.arange(min_x, max_x, ((max_x - min_x) // resolution)))
+
+        ax = fig.add_subplot(1, 1, 1)
+
+        ax.set_xticks(results_dictionary[
+                        Key][
+                        ReferenceFrequency][
+                        result_type_list[0]][0::(size // (resolution * 2))],
+                      minor=True)
+
+        plt.grid(which='minor', color='k', linestyle='--', linewidth=0.5)
+        plt.grid(which='minor', alpha=0.3)
+
+        plt.xlabel('Frequency (MHz)')
+        plt.ylabel('Cumulative Additive Noise (degrees RMS)')
+
+        plt.savefig(os.path.join(file_path,
+                               results_directory_name,
+                               'Cumulative_Additive_IBS_Noise_'
+                               '{0}_Synthesizer_{1}MHz_Ref_vs_tuneF'.format(
+                                       Key,
+                                       ReferenceFrequency)),
+                    bbox_inches='tight')
 # %%
+plt.close("all")
 for Key in set_dict:
     for ReferenceFrequency in reference_frequencies:
-        plt.figure('{0} Synthesizer {1} results for '
-                   '{2}MHz Reference Frequency'.format(
-                Key,
-                result_type_list[1],
-                ReferenceFrequency))
+        fig = plt.figure('{0} Synthesizer {1} results for '
+                         '{2}MHz Reference Frequency'.format(
+                        Key,
+                        result_type_list[1],
+                        ReferenceFrequency),
+                        figsize=(18,10))
+        plt.title('Cumulative Additive Noise Due To Integer Boundary Spurs\n'
+                  '{0} Synthesizer {1}MHz Reference Frequency Results'.format(
+                        Key,
+                        ReferenceFrequency))
+
         for LoCenterFrequency in lo_frequency_dict[Key]:
             plt.plot(results_dictionary[Key][ReferenceFrequency][LoCenterFrequency][result_type_list[3]],
-                     results_dictionary[Key][ReferenceFrequency][LoCenterFrequency][result_type_list[4]])
+                     results_dictionary[Key][ReferenceFrequency][LoCenterFrequency][result_type_list[4]],
+                     '-o',
+                     label=('{0}MHz Synthesizer '
+                            'Center Frequency'.format(LoCenterFrequency)))
+            plt.legend()
+        plt.plot(results_dictionary[Key][ReferenceFrequency][LoCenterFrequency][result_type_list[3]],
+                 cumulative_addative_noise_limit *
+                 np.ones(results_dictionary[Key][ReferenceFrequency][LoCenterFrequency][result_type_list[3]].size),
+                 label='Cumulative Additive Noise Limit')
+        plt.legend()
+
+        plt.legend(bbox_to_anchor=(0.99, 0.99), loc='upper right', borderaxespad=0.)
+
+        plt.grid(color='k', linestyle='--', linewidth=0.5)
+        plt.grid(which='major', alpha=0.9)
+
+        resolution = 20
+        min_x = results_dictionary[Key][ReferenceFrequency][result_type_list[3]][0]
+        max_x = results_dictionary[Key][ReferenceFrequency][result_type_list[3]][-1]
+        plt.xticks(np.arange(min_x, max_x, ((max_x - min_x) // resolution)))
+
+        ax = fig.add_subplot(1, 1, 1)
+        ax.set_xticks(results_dictionary[Key][ReferenceFrequency][result_type_list[3]],
+                      minor=True)
+
+        plt.grid(which='minor', color='k', linestyle='--', linewidth=0.5)
+        plt.grid(which='minor', alpha=0.3)
+
+        plt.xlabel('Frequency (MHz)')
+        plt.ylabel('Cumulative Additive Noise (degrees RMS)')
+
+        plt.savefig(os.path.join(file_path,
+                               results_directory_name,
+                               'Cumulative_Additive_IBS_Noise_'
+                               '{0}_Synthesizer_{1}MHz_Ref_vs_tune_step'.format(
+                                       Key,
+                                       ReferenceFrequency)),
+                    bbox_inches='tight')
 # %%
-plt.plot(results_dictionary[Key][100][54665]['effective_tuning_step_size'],results_dictionary[Key][100][54665]['maximum_cumulative_addative_noise_per_step'])
+plt.close("all")
+for Key in set_dict:
+    for ReferenceFrequency in reference_frequencies:
+        fig = plt.figure('{0} Synthesizer Worst Case results for '
+                         '{1}MHz Reference Frequency'.format(
+                        Key,
+                        ReferenceFrequency),
+                        figsize=(18,10))
+        plt.title('Cumulative Additive Noise Due To Integer Boundary Spurs\n'
+                  '{0} Synthesizer {1}MHz Reference Frequency Results'.format(
+                        Key,
+                        ReferenceFrequency))
+
+        plt.plot(results_dictionary[Key][ReferenceFrequency][result_type_list[3]],
+                 results_dictionary[Key][ReferenceFrequency][result_type_list[7]],
+                 '-o',
+                 label=('Limiting Synthesizer Case Only'))
+        plt.legend()
+
+        plt.plot(results_dictionary[Key][ReferenceFrequency][result_type_list[3]],
+                 cumulative_addative_noise_limit *
+                 np.ones(results_dictionary[Key][ReferenceFrequency][result_type_list[3]].size),
+                 label='Cumulative Additive Noise Limit')
+        plt.legend()
+
+        plt.legend(bbox_to_anchor=(0.99, 0.99), loc='upper right', borderaxespad=0.)
+
+        plt.grid(color='k', linestyle='--', linewidth=0.5)
+        plt.grid(which='major', alpha=0.9)
+
+        resolution = 20
+        min_x = results_dictionary[Key][ReferenceFrequency][result_type_list[3]][0]
+        max_x = results_dictionary[Key][ReferenceFrequency][result_type_list[3]][-1]
+        plt.xticks(np.arange(min_x, max_x, ((max_x - min_x) // resolution)))
+
+        ax = fig.add_subplot(1, 1, 1)
+        ax.set_xticks(results_dictionary[Key][ReferenceFrequency][result_type_list[3]],
+                      minor=True)
+
+        plt.grid(which='minor', color='k', linestyle='--', linewidth=0.5)
+        plt.grid(which='minor', alpha=0.3)
+
+        plt.xlabel('Frequency (MHz)')
+        plt.ylabel('Cumulative Additive Noise (degrees RMS)')
+
+        plt.savefig(os.path.join(file_path,
+                               results_directory_name,
+                               'Cumulative_Worst_Case_Additive_IBS_Noise_'
+                               '{0}_Synthesizer_{1}MHz_Ref_vs_tune_step'.format(
+                                       Key,
+                                       ReferenceFrequency)),
+                    bbox_inches='tight')
 # %%
-# Make a method of the class called plot symbolstream eventually
-plt.scatter(m.symbol_stream.real,m.symbol_stream.imag)
+results_directory_name = None
+dir_count = 0
+while(results_directory_name == None):
+    try:
+        os.listdir(os.path.join(file_path,'Results_{0}'.format(dir_count)))
+    except FileNotFoundError as e:
+        os.mkdir(os.path.join(file_path,'Results_{0}'.format(dir_count)))
+        results_directory_name = 'Results_{0}'.format(dir_count)
+    except PermissionError as e:
+        print('L1 PermissionError: ',e)
+        dir_count = dir_count + 1
+    else:
+        try:
+            os.rmdir(os.path.join(file_path,'Results_{0}'.format(dir_count)))
+        except OSError as e:
+            print('L2 OSError: ',e)
+            dir_count = dir_count + 1
+        except PermissionError as e:
+            print('L2 PermissionError: ',e)
+            dir_count = dir_count + 1
+        else:
+           try:
+               os.mkdir(os.path.join(file_path,'Results_{0}'.format(dir_count)))
+           except PermissionError as e:
+               print('L3 PermissionError: ',e)
+               dir_count = dir_count + 1
+           else:
+               results_directory_name = 'Results_{0}'.format(dir_count)
+
 # %%
-plt.close()
+dataframe_dict = {}
+for Key in set_dict:
+    for ReferenceFrequency in reference_frequencies:
+        series_dict = {}
+        series_dict.update({result_type_list[3]:
+            pd.Series(results_dictionary[
+                        Key][
+                        ReferenceFrequency][
+                        result_type_list[3]],
+                      name=result_type_list[3])})
+        series_dict.update({result_type_list[7]:
+            pd.Series(results_dictionary[
+                        Key][
+                        ReferenceFrequency][
+                        result_type_list[7]],
+                      name=result_type_list[7])})
+        for LoCenterFrequency in lo_frequency_dict[Key]:
+            series_dict.update({'Additive Noise '
+                                'Results_for_{0}MHz'.format(LoCenterFrequency):
+                pd.Series(results_dictionary[
+                            Key][
+                            ReferenceFrequency][
+                            LoCenterFrequency][
+                            result_type_list[4]],
+                          name='Additive Noise '
+                                'Results_for_{0}MHz'.format(LoCenterFrequency))})
+        dataframe_dict.update({'AdditiveNoise{0}With'
+                                   '{1}MHzRef'.format(Key,
+                                                       ReferenceFrequency):
+                               pd.DataFrame.from_dict(series_dict).set_index(
+                                   [result_type_list[3]])
+                               })
+        order = dataframe_dict['AdditiveNoise{0}With'
+                               '{1}MHzRef'.format(Key,
+                                                  ReferenceFrequency)
+                              ].columns.tolist()
+        order = order[-1:] + order[:-1]
+        dataframe_dict['AdditiveNoise{0}With'
+                       '{1}MHzRef'.format(Key,
+                                          ReferenceFrequency)
+                      ] = dataframe_dict['AdditiveNoise{0}With'
+                                         '{1}MHzRef'.format(Key,
+                                                            ReferenceFrequency)
+                                        ].ix[:, order]
 # %%
-m = Modem('bpsk')
-m.generate_pulse_shaping_filter('firrcos', 24, 0.25, 8)
-h =m.firrcos
-hh = [item for item in h.flatten()]
-import matplotlib.pyplot as plt
-plt.plot(hh)
+dataframe_dict_2 = {}
+for Key in set_dict:
+    for ReferenceFrequency in reference_frequencies:
+        series_dict = {}
+        series_dict.update({result_type_list[0]:
+            pd.Series(results_dictionary[
+                        Key][
+                        ReferenceFrequency][
+                        result_type_list[0]],
+                      name=result_type_list[0])})
+        series_dict.update({result_type_list[1]:
+            pd.Series(results_dictionary[
+                        Key][
+                        ReferenceFrequency][
+                        result_type_list[1]],
+                      name=result_type_list[1])})
+        dataframe_dict_2.update({'Spurious{0}With'
+                                   '{1}MHzRef'.format(Key,
+                                                       ReferenceFrequency):
+                               pd.DataFrame.from_dict(series_dict).set_index(
+                                   [result_type_list[0]])
+                               })
 # %%
-%%matlab -o mat_h
-symbols = 24
-USAMPR = 8
-Rolloff=0.25
-Order = symbols*USAMPR
-mat_h = firrcos(Order, 0.5, Rolloff, USAMPR, 'rolloff', 'sqrt')
-mat_h = mat_h.*24*Rolloff
+for Key in dataframe_dict:
+    writer = pd.ExcelWriter(os.path.join(file_path,
+                               results_directory_name,
+                               '{0}.xlsx'.format(Key)),
+                            engine='xlsxwriter')
+    dataframe_dict[Key].to_excel(writer, sheet_name=Key)
+    writer.save()
+for Key in dataframe_dict_2:
+    writer = pd.ExcelWriter(os.path.join(file_path,
+                               results_directory_name,
+                               '{0}.xlsx'.format(Key)),
+                            engine='xlsxwriter')
+    dataframe_dict_2[Key].to_excel(writer, sheet_name=Key)
+    writer.save()
 # %%
-h = mat_h[0]
-plt.plot(h)
