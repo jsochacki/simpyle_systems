@@ -347,6 +347,35 @@ for Key in set_dict:
                     ReferenceFrequency].update(
                         {result_type_list[7]: worst_case_maximum_array})
 # %%
+results_directory_name = None
+dir_count = 0
+while(results_directory_name == None):
+    try:
+        os.listdir(os.path.join(file_path,'Results_{0}'.format(dir_count)))
+    except FileNotFoundError as e:
+        os.mkdir(os.path.join(file_path,'Results_{0}'.format(dir_count)))
+        results_directory_name = 'Results_{0}'.format(dir_count)
+    except PermissionError as e:
+        print('L1 PermissionError: ',e)
+        dir_count = dir_count + 1
+    else:
+        try:
+            os.rmdir(os.path.join(file_path,'Results_{0}'.format(dir_count)))
+        except OSError as e:
+            print('L2 OSError: ',e)
+            dir_count = dir_count + 1
+        except PermissionError as e:
+            print('L2 PermissionError: ',e)
+            dir_count = dir_count + 1
+        else:
+           try:
+               os.mkdir(os.path.join(file_path,'Results_{0}'.format(dir_count)))
+           except PermissionError as e:
+               print('L3 PermissionError: ',e)
+               dir_count = dir_count + 1
+           else:
+               results_directory_name = 'Results_{0}'.format(dir_count)
+# %%
 plt.close("all")
 for Key in set_dict:
     for ReferenceFrequency in reference_frequencies:
@@ -561,36 +590,6 @@ for Key in set_dict:
                                        Key,
                                        ReferenceFrequency)),
                     bbox_inches='tight')
-# %%
-results_directory_name = None
-dir_count = 0
-while(results_directory_name == None):
-    try:
-        os.listdir(os.path.join(file_path,'Results_{0}'.format(dir_count)))
-    except FileNotFoundError as e:
-        os.mkdir(os.path.join(file_path,'Results_{0}'.format(dir_count)))
-        results_directory_name = 'Results_{0}'.format(dir_count)
-    except PermissionError as e:
-        print('L1 PermissionError: ',e)
-        dir_count = dir_count + 1
-    else:
-        try:
-            os.rmdir(os.path.join(file_path,'Results_{0}'.format(dir_count)))
-        except OSError as e:
-            print('L2 OSError: ',e)
-            dir_count = dir_count + 1
-        except PermissionError as e:
-            print('L2 PermissionError: ',e)
-            dir_count = dir_count + 1
-        else:
-           try:
-               os.mkdir(os.path.join(file_path,'Results_{0}'.format(dir_count)))
-           except PermissionError as e:
-               print('L3 PermissionError: ',e)
-               dir_count = dir_count + 1
-           else:
-               results_directory_name = 'Results_{0}'.format(dir_count)
-
 # %%
 dataframe_dict = {}
 for Key in set_dict:
