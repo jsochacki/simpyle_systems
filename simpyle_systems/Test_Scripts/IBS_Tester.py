@@ -12,20 +12,20 @@ file_path = r'C:\Users\socHACKi\Desktop\temp'
 reference_frequencies = [100, 200, 300]
 cumulative_LO_mutiplication = 2
 lo_tuning_range = 125
-lo_frequency_dict = {'Rx': [5800 * cumulative_LO_mutiplication,
-                             (5800 + 200) * cumulative_LO_mutiplication,
-                             (5800 + 350) * cumulative_LO_mutiplication,
-                             (5800 + 500) * cumulative_LO_mutiplication,
-                             (5800 + 650) * cumulative_LO_mutiplication,
-                             (5800 + 800) * cumulative_LO_mutiplication,
-                             (5800 + 1000) * cumulative_LO_mutiplication],
-                      'Tx': [9933 * cumulative_LO_mutiplication,
-                             (9933 + 200) * cumulative_LO_mutiplication,
-                             (9933 + 350) * cumulative_LO_mutiplication,
-                             (9933 + 500) * cumulative_LO_mutiplication,
-                             (9933 + 650) * cumulative_LO_mutiplication,
-                             (9933 + 800) * cumulative_LO_mutiplication,
-                             (9933 + 1000) * cumulative_LO_mutiplication]}
+lo_frequency_dict = {'Rx': [5800 ,
+                             5800 + 200,
+                             5800 + 350,
+                             5800 + 500,
+                             5800 + 650,
+                             5800 + 800,
+                             5800 + 1000],
+                      'Tx': [9933,
+                             9933 + 200,
+                             9933 + 350,
+                             9933 + 500,
+                             9933 + 650,
+                             9933 + 800,
+                             9933 + 1000]}
 adjustment_dict = {'Rx': 5800,
                    'Tx': 5800}
 cumulative_additive_noise_limit = 0.3

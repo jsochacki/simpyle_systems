@@ -111,7 +111,10 @@ class IntegerBoundarySpurs(object):
     """
 
     def __init__(self, *args):
+
         self._post_fix = '.csv'
+
+        # Intake Processing
         if 7 >= len(args) >= 6:
             self._file_path = args[0]
             self._reference_frequencies = args[1]
@@ -128,6 +131,13 @@ class IntegerBoundarySpurs(object):
                             'arguements but instead received '
                             '{0}'.format(len(args)))
 
+        # Need to scale LOs for analysis at output frequencies
+        for Key in self._lo_frequency_dict:
+            temp = [Element * self._cumulative_LO_mutiplication
+                    for Element in self._lo_frequency_dict[Key]]
+            self._lo_frequency_dict.update({Key: temp})
+
+        # General Initialization
         self._lo_tuning_step_sizes = np.arange(1,
                                              self._lo_tuning_range /
                                              self._cumulative_LO_mutiplication,
@@ -149,6 +159,7 @@ class IntegerBoundarySpurs(object):
 
         self._results_directory_name = None
 
+        # Autorun key methods
         self.read_files_and_adjust()
         self.process_files()
         self.create_results_folder()
