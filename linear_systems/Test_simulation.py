@@ -21,18 +21,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # CP, VCO, and Divider parameters
-kpd = 40e-6
-kvco = 110e6
-n = 29
+kpd = 5e-3
+kvco = 30e6
+n = 4500
+
+# frequency analysis data
+#f1 = 5.8e9 * 2 * np.pi # starting frequency
+#f2 = 6.3e9 * 2 * np.pi # final frequency
 
 # Fourth Order Loop filter parameters
-c1 = 1.52e-9
-c2 = 37.7e-9
-c3 = 893e-12
-c4 = 253.3e-12
-r2 = 145
-r3 = 113
-r4 = 738
+c1 = 5.6e-9
+c2 = 100e-9
+c3 = 330e-12
+c4 = 104e-12
+r2 = 1000
+r3 = 6800
+r4 = 33000
 
 # Constants used in transfer function of loop filter and open loop response
 a0 = c1 + c2 + c3 + c4
@@ -47,6 +51,9 @@ t2_open = t2 * k
 s1 = t2 * k
 s0 = k
 
+# constants for accurate analysis
+#q0 = (k * (f2-f1))
+#q1 = (k * (f2-f1) * t2)
 
 def graph_mag(w, mag, title): # function for graphing magnitude response
     plt.figure()
@@ -98,13 +105,19 @@ def graph_lf(): # graph just open loop gain response
 
 def graph_noise(): # graph just phase noise
     graph_mag(x, losc, 'Phase Noise')
-    graph_mag(x, combo, 'Phase Noise combo')
-    plt.show()             
+    plt.show() 
+
+#def graph_acc(): # graph just open loop gain response
+#    # Open loop transfer response for PLL
+#    graph_mag(x, mag_a, 'Accurate Closed Loop Response') 
+#    graph_phase(x, phase_a, 'Accurate Closed Loop Response')
+#    plt.show()
 
 # numerators for transient response
 num_filter = [t2, 1]
 num_open = [t2_open, k]
 num_closed = [s1, s0]
+#num_accurate = [q1, q0]
 
 # denominators for transient response
 den_filter = [a3, a2, a1, a0, 0]
@@ -115,6 +128,7 @@ den_closed = [a3, a2, a1, a0, s1, s0]
 f_filter = signal.TransferFunction(num_filter, den_filter)
 f_open = signal.TransferFunction(num_open, den_open)
 f_closed = signal.TransferFunction(num_closed, den_closed)
+#f_accurate = signal.TransferFunction(num_accurate, den_closed)
 
 # create plot data
 x = np.arange (0.1, 100e6, 10)                      # frequency range 0.1Hz to 100MHz
@@ -122,25 +136,13 @@ x_new = x * 2 * np.pi                               # change frequency to rads/s
 w, mag, phase = signal.bode(f_filter, x_new)        # loop filter creation
 w_o, mag_o, phase_o = signal.bode(f_open, x_new)    # open loop creation
 w_c, mag_c, phase_c = signal.bode(f_closed, x_new)  # closed loop creation
-
+#w_a, mag_a, phase_a = signal.bode(f_accurate, x_new)# more accurate response creation
 
 
 
 # Phase Noise Simulation
 noise_in = x / 10000
 losc = -100.9 - 20 * np.log(noise_in)
-combo = np.log10((-100.9 - 20 * np.log(noise_in) + mag_c)
-
-
-
-
-
-
-
-
-
-
-
 
 
 
