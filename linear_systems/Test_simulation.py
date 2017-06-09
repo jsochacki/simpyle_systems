@@ -27,7 +27,7 @@ n = 4500
 
 # frequency analysis data
 #f1 = 5.8e9 * 2 * np.pi # starting frequency
-#f2 = 6.3e9 * 2 * np.pi # final frequency
+#f2 = 5.913e9 * 2 * np.pi # final frequency
 
 # Fourth Order Loop filter parameters
 c1 = 5.6e-9
@@ -48,12 +48,12 @@ t2 = r2 * c2
 t2_open = t2 * k
 
 # adjusted constants for closed loop response
-s1 = t2 * k
-s0 = k
+s1 = (t2 * k) / n
+s0 = k /n
 
 # constants for accurate analysis
-#q0 = (k * (f2-f1))
-#q1 = (k * (f2-f1) * t2)
+#q0 = (k * (f2-f1)) / n
+#q1 = (k * (f2-f1) * t2) / n
 
 def graph_mag(w, mag, title): # function for graphing magnitude response
     plt.figure()
@@ -104,8 +104,16 @@ def graph_lf(): # graph just open loop gain response
     plt.show()
 
 def graph_noise(): # graph just phase noise
-    graph_mag(x, losc, 'Phase Noise')
-    plt.show() 
+    plt.figure()
+    plt.semilogx(x, tot)    # Bode magnitude plot
+    plt.semilogx(x, losc, 'r')
+    plt.grid()
+    plt.ylim([-200,-50])
+    plt.xlim([1e3,1e6])
+    plt.gca().xaxis.grid(True, which='minor')
+    plt.title('Phase Noise')
+    plt.xlabel(r'Frequency (Hz)')
+    plt.ylabel(r'Phase Noise Power (dbc/Hz)')
 
 #def graph_acc(): # graph just open loop gain response
 #    # Open loop transfer response for PLL
@@ -131,7 +139,7 @@ f_closed = signal.TransferFunction(num_closed, den_closed)
 #f_accurate = signal.TransferFunction(num_accurate, den_closed)
 
 # create plot data
-x = np.arange (0.1, 100e6, 10)                      # frequency range 0.1Hz to 100MHz
+x = np.arange (1000, 100e4, 10)                      # frequency range 0.1Hz to 100MHz
 x_new = x * 2 * np.pi                               # change frequency to rads/s for bode plot function
 w, mag, phase = signal.bode(f_filter, x_new)        # loop filter creation
 w_o, mag_o, phase_o = signal.bode(f_open, x_new)    # open loop creation
@@ -141,13 +149,8 @@ w_c, mag_c, phase_c = signal.bode(f_closed, x_new)  # closed loop creation
 
 
 # Phase Noise Simulation
-noise_in = x / 10000
-losc = -100.9 - 20 * np.log(noise_in)
-
-
-
-
-
+losc = (-100.9) - (20 * np.log10( x / 10e3))
+tot = mag_c + losc
 
 
 
