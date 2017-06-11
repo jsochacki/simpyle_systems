@@ -159,4 +159,3 @@ tot = mag_c + losc
 
 
 
-
