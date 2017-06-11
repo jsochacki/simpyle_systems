@@ -20,12 +20,15 @@ from scipy import signal
 import numpy as np
 import matplotlib.pyplot as plt
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 # CP, VCO, and Divider parameters
 kpd = 2.5e-3         # icp also
 kvco = 110e6
 n = 59.139
 =======
+=======
+>>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
 import control
 
 # CP, VCO, and Divider parameters
@@ -36,6 +39,9 @@ n = 63000
 # frequency analysis data
 f1 = 5.8e9 # starting frequency
 f2 = 6.03e9 # final frequency
+<<<<<<< HEAD
+>>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
+=======
 >>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
 
 # Fourth Order Loop filter parameters
@@ -43,7 +49,11 @@ c1 = 1.52e-9
 c2 = 37.7e-9
 c3 = 893e-12
 <<<<<<< HEAD
+<<<<<<< HEAD
 c4 = 253.3e-12
+=======
+c4 = 252.3e-12
+>>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
 =======
 c4 = 252.3e-12
 >>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
@@ -62,16 +72,22 @@ t2_open = t2 * k
 
 # adjusted constants for closed loop response
 <<<<<<< HEAD
+<<<<<<< HEAD
 s1 = (t2 * k) / n
 s0 = k / n
 
 =======
+=======
+>>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
 s1 = t2 * k
 s0 = k
 
 # constants for time analysis
 q1 = (k * (f2-f1))/n
 q0 = (k * (f2-f1) * t2)/n
+<<<<<<< HEAD
+>>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
+=======
 >>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
 
 def graph_mag(w, mag, title): # function for graphing magnitude response
@@ -93,6 +109,7 @@ def graph_phase(w, phase, title): # function for graphing phase response
     plt.ylabel(r'Phase (deg)')
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 def main(): # function to create all 3 response graphs
     # transfer response of loop filter
     graph_mag(freq, mag, 'Loop Filter Response') 
@@ -104,6 +121,8 @@ def main(): # function to create all 3 response graphs
     graph_mag(freq, mag_c, 'Closed Loop PLL Response') 
     graph_phase(freq, phase_c, 'Closed Loop PLL Response')
 =======
+=======
+>>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
 def graph_time(): # function for graphing phase response
     plt.figure()
     plt.plot(time_t, time_f)    # Bode Phase plot
@@ -122,14 +141,22 @@ def main(): # function to create all 3 response graphs
     # Closed loop transfer response for PLL
     graph_mag(x, mag_c, 'Closed Loop PLL Response') 
     graph_phase(x, phase_c, 'Closed Loop PLL Response')
+<<<<<<< HEAD
+>>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
+=======
 >>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
     plt.show()
 
 def graph_cl(): # graph just closed loop gain response
     # Closed loop transfer response for PLL
 <<<<<<< HEAD
+<<<<<<< HEAD
     graph_mag(freq, mag_c, 'Closed Loop PLL Response') 
     graph_phase(freq, phase_c, 'Closed Loop PLL Response')
+=======
+    graph_mag(x, mag_c, 'Closed Loop PLL Response') 
+    graph_phase(x, phase_c, 'Closed Loop PLL Response')
+>>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
 =======
     graph_mag(x, mag_c, 'Closed Loop PLL Response') 
     graph_phase(x, phase_c, 'Closed Loop PLL Response')
@@ -139,8 +166,13 @@ def graph_cl(): # graph just closed loop gain response
 def graph_ol(): # graph just open loop gain response
     # Open loop transfer response for PLL
 <<<<<<< HEAD
+<<<<<<< HEAD
     graph_mag(freq, mag_o, 'Open Loop PLL Response') 
     graph_phase(freq, phase_o, 'Open Loop PLL Response')
+=======
+    graph_mag(x, mag_o, 'Open Loop PLL Response') 
+    graph_phase(x, phase_o, 'Open Loop PLL Response')
+>>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
 =======
     graph_mag(x, mag_o, 'Open Loop PLL Response') 
     graph_phase(x, phase_o, 'Open Loop PLL Response')
@@ -149,6 +181,7 @@ def graph_ol(): # graph just open loop gain response
 
 def graph_lf(): # graph just open loop gain response
     # Open loop transfer response for PLL
+<<<<<<< HEAD
 <<<<<<< HEAD
     graph_mag(freq, mag, 'Loop Filter Response') 
     graph_phase(freq, phase, 'Loop Filter Response')
@@ -169,6 +202,10 @@ def graph_noise(): # graph just phase noise
     graph_mag(x, mag, 'Loop Filter Response') 
     graph_phase(x, phase, 'Loop Filter Response')
 >>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
+=======
+    graph_mag(x, mag, 'Loop Filter Response') 
+    graph_phase(x, phase, 'Loop Filter Response')
+>>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
     plt.show()
 
 # numerators for transient response
@@ -176,6 +213,10 @@ num_filter = [t2, 1]
 num_open = [t2_open, k]
 num_closed = [s1, s0]
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+num_time = [q1, q0]
+>>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
 =======
 num_time = [q1, q0]
 >>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
@@ -190,6 +231,7 @@ f_filter = signal.TransferFunction(num_filter, den_filter)
 f_open = signal.TransferFunction(num_open, den_open)
 f_closed = signal.TransferFunction(num_closed, den_closed)
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 # create plot data
 freq = np.arange (1, 100e6, 10)                      # frequency range 0.1Hz to 100MHz
@@ -198,6 +240,8 @@ w, mag, phase = signal.bode(f_filter, x_new)        # loop filter creation
 w_o, mag_o, phase_o = signal.bode(f_open, x_new)    # open loop creation
 w_c, mag_c, phase_c = signal.bode(f_closed, x_new)  # closed loop creation
 =======
+=======
+>>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
 f_time = control.tf(num_time, den_closed)
 
 # create plot data
@@ -216,11 +260,15 @@ time_t, time_f = control.step_response(f_time)      # time response creation
 
 
 
+<<<<<<< HEAD
+>>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
+=======
 >>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
 
 
 
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 # Phase Noise Simulation
 ref_noise = np.piecewise(freq, [freq < 1, (10 > freq) & (freq >= 1), (100 > freq) & (freq >= 10), (1e3 > freq) & (freq >= 100), (1e4 > freq) & (freq >= 1e3), freq >= 1e4], [lambda x: -32 * np.log10(1241 * x), lambda x: -21 * np.log10(5.179e4 * x), lambda x: -17 * np.log10(1.145e6 * x), lambda x: -3 * np.log10(4.642e43 * x), lambda x: -5 * np.log10(1e25 * x), -145])
@@ -236,6 +284,8 @@ tr3 = (c3*c2)/(c1+c2)]
 tr4 = signal.TransferFunctio()
 s_ref = mag_c + 10*np.log10(10**(ref_noise/10)) #not working
 s_vco = mag_c + 10*np.log10(10**(vco_noise/10)) #not working
+=======
+>>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
 =======
 >>>>>>> eea7698fe7cc5fa193f3515050271a0bd4580e52
 
