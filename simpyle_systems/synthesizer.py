@@ -1022,3 +1022,270 @@ class IntegerBoundarySpurs(object):
 
     def close_all_figs(self):
         plt.close("all")
+
+
+class PhaseNoise(object):
+    r"""
+    This is a class that takes 3 pieces of information and makes an object
+    that is much easier to work with for phase noise calculations.  The main
+    purpose is to contain all the functions necessary for data manipulation
+    to keep the main code clean.
+
+    Parameters
+    ----------
+
+        Frequency Offset Phase Noise : List, Float
+                     This is a list of list pairs that contains the
+                     frequency offset and its corresponding phase noise value
+
+        Specification Frequency : Float
+                     This is the frequency at which the Frequency Offset Phase
+                     Noise List is specified
+
+        System Impedance : List, Float
+                     This is list of list pairs that contains the frequency
+                     dependant impedance the that will be used for translation
+                     to voltage noise and current noise when necessary at each
+                     frequency offset.  If a singe value is passed in instead
+                     then the single value will be applied at all frequency
+                     offsets
+
+    Returns
+    -------
+
+        object : PhaseNoise object
+                 This object is what you can interact with to simplify
+                 analysis and calculation
+
+    See Also
+    --------
+
+    Nothing currently
+
+    Example
+    -------
+
+    >>> phase_noise = [[0.1,-144], [1,-165], [10,-167],
+    >>>                [100,-168], [1000,-168], [10000,-169]]
+    >>> frequency = 10e6
+    >>> impedance = 50
+    >>> instance = PhaseNoise(
+    >>>                phase_noise,
+    >>>                frequency,
+    >>>                impedance)
+    <simpyle_systems.synthesizer.PhaseNoise at 0xab73a58>
+
+
+    """
+
+    def __init__(self, *args):
+        self._storage_mode = 'pair'
+        # Intake Processing
+        if len(args) == 3:
+            self._phase_noise = args[0]
+            self._specification_frequency = args[1]
+            self._current_frequency = args[1]
+            self._impedance = args[2]
+        self._phase_noise_split = []
+        self._phase_noise_pair = []
+        self.update_sp()
+
+    @property
+    def storage_mode(self):
+        return self._storage_mode
+
+    @storage_mode.setter
+    def storage_mode(Value):
+        self._storage_mode = Value
+
+    @property
+    def phase_noise(self):
+        return self._phase_noise
+
+    @phase_noise.setter
+    def phase_noise(Value):
+        self._phase_noise = Value
+
+    @property
+    def specification_frequency(self):
+        return self._specification_frequency
+
+    @specification_frequency.setter
+    def specification_frequency(Value):
+        self._specification_frequency = Value
+
+    @property
+    def current_frequency(self):
+        return self._current_frequency
+
+    @current_frequency.setter
+    def current_frequency(Value):
+        self._current_frequency = Value
+
+    @property
+    def impedance(self):
+        return self._impedance
+
+    @impedance.setter
+    def impedance(Value):
+        self._impedance = Value
+
+    @property
+    def phase_noise_split(self):
+        return self._phase_noise_split
+
+    @phase_noise_split.setter
+    def phase_noise_split(Value):
+        self._phase_noise_split = Value
+
+    @property
+    def phase_noise_pair(self):
+        return self._phase_noise_pair
+
+    @phase_noise_pair.setter
+    def phase_noise_pair(Value):
+        self._phase_noise_pair = Value
+
+    @staticmethod
+    def logspace(Start, NumberOfDecades):
+        logspace_vector = [Start*i*n
+                           for i in np.power(10,np.array(range(0,NumberOfDecades)))
+                           for n in range(1,10)]
+        logspace_vector.extend([np.power(10,np.log10(Start)+NumberOfDecades)])
+        return logspace_vector
+
+    @staticmethod
+    def interpolate(XValues, YValues, NewXValues, InterpolationType):
+        if InterpolationType.upper() == 'LOG':
+            NewYValues = [YValues[0]]
+            NewXIndex = 1
+            for XIndex in range(1, len(XValues)):
+                if XIndex < (len(XValues)-1):
+                    while NewXValues[NewXIndex] <= XValues[XIndex]:
+                        dy_log = YValues[XIndex] - YValues[XIndex-1]
+                        del_x_log = 10*np.log10(NewXValues[NewXIndex] /
+                                                NewXValues[NewXIndex-1])
+                        dx_log = 10*np.log10(XValues[XIndex] /
+                                             XValues[XIndex-1])
+                        NewYValues.extend([NewYValues[NewXIndex-1] +
+                                           ((del_x_log * dy_log) / dx_log)])
+                        NewXIndex += 1
+                else:
+                    while NewXValues[NewXIndex] < XValues[XIndex]:
+                        dy_log = YValues[XIndex] - YValues[XIndex-1]
+                        del_x_log = 10*np.log10(NewXValues[NewXIndex] /
+                                                NewXValues[NewXIndex-1])
+                        dx_log = 10*np.log10(XValues[XIndex] /
+                                             XValues[XIndex-1])
+                        NewYValues.extend([NewYValues[NewXIndex-1] +
+                                           ((del_x_log * dy_log) / dx_log)])
+                        NewXIndex += 1
+            NewYValues.extend([YValues[-1]])
+            return NewYValues
+        else:
+            pass
+        pass
+
+    def interpolate_self(self, NewXValues, InterpolationType):
+        self._phase_noise = \
+            self.pair(NewXValues,
+                      self.interpolate(self.split(self.phase_noise)[0],
+                                       self.split(self.phase_noise)[1],
+                                       NewXValues,
+                                       InterpolationType))
+        self.update_sp()
+
+    def interpolate_self_logspace(self):
+        self.interpolate_self(
+                self.logspace(self.phase_noise[0][0],
+                              int(np.log10(self.phase_noise[-1][0] /
+                                           self.phase_noise[0][0]))),
+                              'log')
+        self.update_sp()
+
+    def phase_noise_fill(self, PhaseNoiseOffsetVector, FillValue):
+        PhaseNoisePairVector = self.phase_noise
+        if FillValue == []:
+            if PhaseNoisePairVector[0][0] == PhaseNoiseOffsetVector[0]:
+                FillValue = PhaseNoisePairVector[-1][1]
+            elif PhaseNoisePairVector[-1][0] == PhaseNoiseOffsetVector[-1]:
+                FillValue = PhaseNoisePairVector[0][1]
+            else:
+                pass
+        defined_offsets = [PhaseNoisePairVector[index][0]
+                           for index, v in enumerate(PhaseNoisePairVector)]
+        for Offset in PhaseNoiseOffsetVector:
+            if not(Offset in defined_offsets):
+                PhaseNoisePairVector.extend([[Offset, FillValue]])
+        PhaseNoisePairVector.sort()
+        self._phase_noise = PhaseNoisePairVector
+        self.update_sp()
+
+    def phase_noise_strip(self, StripValue):
+        PhaseNoisePairVector = self.phase_noise
+        new_phase_noise_pair_vector = \
+            [PhaseNoisePairVector[index]
+            for index, v in enumerate(PhaseNoisePairVector)
+            if PhaseNoisePairVector[index][1] > StripValue]
+        self._phase_noise = new_phase_noise_pair_vector
+        self.update_sp()
+
+    def pair_self(self):
+        if self.storage_mode == 'split':
+            self._phase_noise = self.phase_noise_pair
+            self._storage_mode = 'pair'
+        else:
+            print('error, already in pair storage format')
+
+    def split_self(self):
+        if self.storage_mode == 'pair':
+            self._phase_noise = self.phase_noise_split
+            self._storage_mode = 'split'
+        else:
+            print('error, already in split storage format')
+
+    def update_sp(self):
+        if self.storage_mode == 'pair':
+            self._phase_noise_split = self.split(self.phase_noise)
+            self._phase_noise_pair = self.phase_noise
+        else:
+            self._phase_noise_split = self.phase_noise
+            self._phase_noise_pair = self.pair(self.phase_noise[0],
+                                               self.phase_noise[1])
+
+    def change_frequency(self, NewFrequency):
+        self._phase_noise = self.scale_phase_noise(self.phase_noise,
+                                                   self.current_frequency,
+                                                   NewFrequency)
+        self._current_frequency = NewFrequency
+        self.update_sp()
+
+    @staticmethod
+    def pair(x, y):
+        output = []
+        for Index in range(len(x)):
+            output.append([x[Index], y[Index]])
+        return output
+
+    @staticmethod
+    def split(x):
+        output = []
+        for Index in range(len(x[0])):
+            output.append([y[Index] for y in x])
+        return output
+
+    @classmethod
+    def combine(self, x, y):
+        output = []
+        for Index, Value in enumerate(x):
+            output.append([x[Index][1] + y[Index][1]])
+        return self.pair(self.split(x)[0], output)
+
+    @staticmethod
+    def scale_phase_noise(PhaseNoise, CurrentFrequency, OutputFrequency):
+        output = []
+        for Index in range(len(PhaseNoise)):
+            output.append([PhaseNoise[Index][0],
+                           PhaseNoise[Index][1] + 20*np.log10(OutputFrequency /
+                                                              CurrentFrequency)])
+        return output

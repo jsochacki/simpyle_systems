@@ -14,17 +14,21 @@ import matplotlib.pyplot as plt
 # Synthesizer Values
 Kv = 121 # In MHZ / Volt
 Kp = 0.000397887 # In Amps / Rad
-N = 58 # Feedback divider setting
+phase_detector_FOM = -239
+phase_detector_frequency = 10000000
+N = 3280 # Feedback divider setting
 M = 1 # Reference Divider Setting
 # %%
 # Phase Noise Information
 phase_noise_offset_frequencies_hz = [0.1, 1, 10, 100, 1000,
                                      10000, 100000, 1000000, 10000000]
 #loop_filter_output_voltage_noise =
-reference_phase_noise_dBm = [[0.1,-87], [1,-119], [10,-140],
-                             [100,-157], [1000,-160], [10000,-165]]
 loop_filter_output_phase_noise_dBm = [[0.1,-144], [1,-165], [10,-167],
                                       [100,-168], [1000,-168], [10000,-169]]
+vco_phase_noise_dBm = [[100,-30], [1000,-60], [10000,-91],
+                       [100000,-114], [1000000,-134], [10000000,-153]]
+reference_phase_noise_dBm = [[0.1,-87], [1,-119], [10,-140],
+                             [100,-157], [1000,-160], [10000,-165]]
 # %%
 # Loop Filter Component Values
 C1 = 37.1e-9
@@ -91,21 +95,15 @@ def loop_filter_transfer_impedance(frequency, T2, A3, A2, A1, A0):
 def open_loop_transfer_function(frequency, Z, Kp, Kv):
     s = 1j * 2 * np.pi * frequency
     KV = Kv * 2 * np.pi * 1e6
-    KP = Kp# * 2 * np.pi
-    # FIX ME, currently the results are correct but the math says I should
-    # multipy kp by 2 Pi to remove all units
+    KP = Kp
     return ((KV * KP * Z) / s)
 
 def loop_filter_transfer_function(G, N, Z, Kp):
-    KP = Kp# * 2 * np.pi
-    # FIX ME, currently the results are correct but the math says I should
-    # multipy kp by 2 Pi to remove all units
+    KP = Kp
     return ((G / (KP * Z)) / (1 - (G / N)))
 
 def charge_pump_transfer_function(G, N, Kp):
-    KP = Kp# * 2 * np.pi
-    # FIX ME, currently the results are correct but the math says I should
-    # multipy kp by 2 Pi to remove all units
+    KP = 50#Kp
     return ((G / KP) / (1 - (G / N)))
 
 def vco_transfer_function(G, N):
@@ -156,13 +154,43 @@ def interpolate(XValues, YValues, NewXValues, InterpolationType):
 
 def phase_noise_fill(PhaseNoisePairVector, PhaseNoiseOffsetVector, FillValue):
     if FillValue == []:
-        FillValue = PhaseNoisePairVector[-1][1]
-    defined_offsets = [PhaseNoisePairVector[index][0]
-                       for index, v in enumerate(PhaseNoisePairVector)]
-    for Offset in PhaseNoiseOffsetVector:
-        if not(Offset in defined_offsets):
-            PhaseNoisePairVector.extend([[Offset, FillValue]])
-    PhaseNoisePairVector.sort()
+        if PhaseNoisePairVector[0][0] == PhaseNoiseOffsetVector[0]:
+            FillValue = PhaseNoisePairVector[-1][1]
+        elif PhaseNoisePairVector[-1][0] == PhaseNoiseOffsetVector[-1]:
+            FillValue = PhaseNoisePairVector[0][1]
+        else:
+            pass
+
+        defined_offsets = [PhaseNoisePairVector[index][0]
+                           for index, v in enumerate(PhaseNoisePairVector)]
+        for Offset in PhaseNoiseOffsetVector:
+            if not(Offset in defined_offsets):
+                PhaseNoisePairVector.extend([[Offset, FillValue]])
+        PhaseNoisePairVector.sort()
+
+    elif FillValue.upper() == '20LOG':
+        if PhaseNoisePairVector[0][0] == PhaseNoiseOffsetVector[0]:
+            FillValue = PhaseNoisePairVector[-1][1]
+        elif PhaseNoisePairVector[-1][0] == PhaseNoiseOffsetVector[-1]:
+            FillValue = PhaseNoisePairVector[0][1]
+        else:
+            pass
+
+        defined_offsets = [PhaseNoisePairVector[index][0]
+                           for index, v in enumerate(PhaseNoisePairVector)]
+        for Offset in PhaseNoiseOffsetVector:
+            if not(Offset in defined_offsets):
+                PhaseNoisePairVector.extend([[Offset, FillValue]])
+        PhaseNoisePairVector.sort()
+
+    else:
+        defined_offsets = [PhaseNoisePairVector[index][0]
+                           for index, v in enumerate(PhaseNoisePairVector)]
+        for Offset in PhaseNoiseOffsetVector:
+            if not(Offset in defined_offsets):
+                PhaseNoisePairVector.extend([[Offset, FillValue]])
+        PhaseNoisePairVector.sort()
+
     return PhaseNoisePairVector
 
 def phase_noise_strip(PhaseNoisePairVector, StripValue):
@@ -197,6 +225,14 @@ def scale_phase_noise(PhaseNoise, CurrentFrequency, OutputFrequency):
                        PhaseNoise[Index][1] + 20*np.log10(OutputFrequency /
                                                           CurrentFrequency)])
     return output
+
+def generate_phase_detector_phase_noise(FOffset, FReference, FCarrier, FOM, FDetector):
+    output = [FOffset]
+    output.append([FOM +
+                   10*np.log10(FDetector) +
+                   20*np.log10(FCarrier / FReference)]
+                   * len(FOffset))
+    return pair(output[0],output[1])
 # %%
 start_frequency = 0.1
 stop_frequency = 1e6
@@ -287,31 +323,61 @@ ax.plot(REFTFvvf_dB[0], REFTFvvf_dB[1],
         color='black', lw=2)
 # %%
 # Do phase noise formatting and filling
+phase_detector_phase_noise_at_10GHz_dBm = \
+    generate_phase_detector_phase_noise(phase_noise_offset_frequencies_hz,
+                                        10000000,
+                                        32.8e9,
+                                        phase_detector_FOM,
+                                        phase_detector_frequency)
 reference_phase_noise_at_10GHz_dBm = \
-    scale_phase_noise(reference_phase_noise_dBm, 10, 10000)
-reference_phase_noise_at_10GHz_dBm = phase_noise_fill(
-                                        reference_phase_noise_at_10GHz_dBm,
-                                        phase_noise_offset_frequencies_hz,
-                                        [])
+    scale_phase_noise(reference_phase_noise_dBm, 10, 32800)
+vco_phase_noise_at_10GHz_dBm = \
+    scale_phase_noise(vco_phase_noise_dBm, 5848.2, 32800)
 loop_filter_output_phase_noise_dBm = phase_noise_fill(
                                         loop_filter_output_phase_noise_dBm,
+                                        phase_noise_offset_frequencies_hz,
+                                        [])
+vco_phase_noise_at_10GHz_dBm = phase_noise_fill(
+                                        vco_phase_noise_at_10GHz_dBm,
+                                        phase_noise_offset_frequencies_hz,
+                                        [])
+reference_phase_noise_at_10GHz_dBm = phase_noise_fill(
+                                        reference_phase_noise_at_10GHz_dBm,
                                         phase_noise_offset_frequencies_hz,
                                         [])
 # %%
 # Calculate results
 LFPN = split(combine(pair(LFTFvvf_dB[0], LFTFvvf_dB[1]),
                      loop_filter_output_phase_noise_dBm))
+PDPN = split(combine(pair(CPTFvvf_dB[0], CPTFvvf_dB[1]),
+                     phase_detector_phase_noise_at_10GHz_dBm))
+VCOPN = split(combine(pair(VCOTFvvf_dB[0], VCOTFvvf_dB[1]),
+                     vco_phase_noise_at_10GHz_dBm))
+REFPN = split(combine(pair(REFTFvvf_dB[0], REFTFvvf_dB[1]),
+                     reference_phase_noise_at_10GHz_dBm))
 # %%
 # Plot results
 fig = plt.figure('Phase Noise Results')
 ax = fig.add_subplot(111)
 # ax.set_yscale('log')
 ax.set_xscale('log')
-ax.plot(split(reference_phase_noise_at_10GHz_dBm)[0],
-        split(reference_phase_noise_at_10GHz_dBm)[1], color='black', lw=2)
-
 ax.plot(split(loop_filter_output_phase_noise_dBm)[0],
         split(loop_filter_output_phase_noise_dBm)[1],
         color='red', linestyle='--', lw=1)
+ax.plot(split(phase_detector_phase_noise_at_10GHz_dBm)[0],
+        split(phase_detector_phase_noise_at_10GHz_dBm)[1],
+        color='green', linestyle='--', lw=1)
+ax.plot(split(vco_phase_noise_at_10GHz_dBm)[0],
+        split(vco_phase_noise_at_10GHz_dBm)[1],
+        color='blue', linestyle='--', lw=1)
+ax.plot(split(reference_phase_noise_at_10GHz_dBm)[0],
+        split(reference_phase_noise_at_10GHz_dBm)[1],
+        color='black', linestyle='--', lw=2)
+ax.plot(VCOPN[0], VCOPN[1],
+        color='blue', lw=1)
+ax.plot(PDPN[0], PDPN[1],
+        color='green', lw=1)
 ax.plot(LFPN[0], LFPN[1],
         color='red', lw=1)
+ax.plot(REFPN[0], REFPN[1],
+        color='black', lw=1)
